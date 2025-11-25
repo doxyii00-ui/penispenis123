@@ -1,4 +1,4 @@
-import { Client, GatewayIntentBits, ChannelType, PermissionFlagsBits, ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } from 'discord.js';
+import { Client, GatewayIntentBits, ChannelType, PermissionFlagsBits, ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, ModalBuilder, TextInputBuilder, TextInputStyle, REST, Routes, SlashCommandBuilder } from 'discord.js';
 import { storage } from './storage';
 import { log } from './app';
 
@@ -150,7 +150,6 @@ async function initializeDiscordBot() {
       const weryfikacjaChannel = guild.channels.cache.find((c) => c.name === 'weryfikacja' && c.isTextBased());
       if (weryfikacjaChannel && weryfikacjaChannel.isTextBased()) {
         try {
-          // Check if verification message already exists
           const messages = await weryfikacjaChannel.messages.fetch({ limit: 10 });
           const existingVerifyMessage = messages.find((msg) => msg.author.id === discordClient!.user!.id && msg.content?.includes('Weryfikacja'));
 
@@ -178,6 +177,57 @@ async function initializeDiscordBot() {
         } catch (error) {
           log(`Error posting verification message: ${error}`, 'discord-bot');
         }
+      }
+
+      // Post ticket message in tickety channel
+      const ticketyChannel = guild.channels.cache.find((c) => c.name === 'tickety' && c.isTextBased());
+      if (ticketyChannel && ticketyChannel.isTextBased()) {
+        try {
+          const messages = await ticketyChannel.messages.fetch({ limit: 10 });
+          const existingTicketMessage = messages.find((msg) => msg.author.id === discordClient!.user!.id && msg.content?.includes('Ticket'));
+
+          if (!existingTicketMessage) {
+            const ticketButton = new ButtonBuilder()
+              .setCustomId('open_ticket_button')
+              .setLabel('Otwórz Ticket')
+              .setStyle(ButtonStyle.Primary);
+
+            const row = new ActionRowBuilder()
+              .addComponents(ticketButton);
+
+            const embed = new EmbedBuilder()
+              .setTitle('Ticket System')
+              .setDescription('Kliknij przycisk poniżej aby otworzyć ticket w sprawie aplikacji lub pytań.')
+              .setColor(0x5865f2);
+
+            await ticketyChannel.send({
+              embeds: [embed],
+              components: [row as any],
+            });
+
+            log('Ticket message posted in tickety channel', 'discord-bot');
+          }
+        } catch (error) {
+          log(`Error posting ticket message: ${error}`, 'discord-bot');
+        }
+      }
+
+      // Register slash commands
+      try {
+        const commands = [
+          new SlashCommandBuilder()
+            .setName('ticket')
+            .setDescription('Otwórz nowy ticket'),
+        ];
+
+        const rest = new REST({ version: '10' }).setToken(token);
+        await rest.put(Routes.applicationGuildCommands(discordClient!.user!.id, guild.id), {
+          body: commands.map((cmd) => cmd.toJSON()),
+        });
+
+        log('Slash commands registered', 'discord-bot');
+      } catch (error) {
+        log(`Error registering commands: ${error}`, 'discord-bot');
       }
     });
 
@@ -227,35 +277,136 @@ async function initializeDiscordBot() {
       }
     });
 
-    // Handle button interactions
+    // Handle interactions (buttons, modals, commands)
     discordClient.on('interactionCreate', async (interaction) => {
-      if (!interaction.isButton()) return;
+      // Handle slash commands
+      if (interaction.isChatInputCommand()) {
+        if (interaction.commandName === 'ticket') {
+          const modal = new ModalBuilder()
+            .setCustomId('ticket_modal')
+            .setTitle('Otwórz Ticket');
 
-      if (interaction.customId === 'verify_button') {
-        const member = interaction.member;
-        if (!member || typeof member === 'string') return;
+          const subjectInput = new TextInputBuilder()
+            .setCustomId('ticket_subject')
+            .setLabel('Temat')
+            .setStyle(TextInputStyle.Short)
+            .setPlaceholder('Np. Problem z aplikacją')
+            .setRequired(true);
 
-        try {
-          const verifiedRole = interaction.guild?.roles.cache.find((r) => r.name === ROLE_NAMES.VERIFIED);
-          const unverifiedRole = interaction.guild?.roles.cache.find((r) => r.name === ROLE_NAMES.UNVERIFIED);
+          const descriptionInput = new TextInputBuilder()
+            .setCustomId('ticket_description')
+            .setLabel('Opis')
+            .setStyle(TextInputStyle.Paragraph)
+            .setPlaceholder('Opisz swój problem...')
+            .setRequired(true);
 
-          if (verifiedRole && unverifiedRole && member.roles && typeof member.roles.remove === 'function') {
-            await member.roles.remove(unverifiedRole);
-            await member.roles.add(verifiedRole);
-            
+          const firstRow = new ActionRowBuilder<TextInputBuilder>().addComponents(subjectInput);
+          const secondRow = new ActionRowBuilder<TextInputBuilder>().addComponents(descriptionInput);
+
+          modal.addComponents(firstRow, secondRow);
+          await interaction.showModal(modal);
+        }
+      }
+
+      // Handle button clicks
+      if (interaction.isButton()) {
+        if (interaction.customId === 'verify_button') {
+          const member = interaction.member;
+          if (!member || typeof member === 'string') return;
+
+          try {
+            const verifiedRole = interaction.guild?.roles.cache.find((r) => r.name === ROLE_NAMES.VERIFIED);
+            const unverifiedRole = interaction.guild?.roles.cache.find((r) => r.name === ROLE_NAMES.UNVERIFIED);
+
+            if (verifiedRole && unverifiedRole && member.roles && typeof member.roles.remove === 'function') {
+              await member.roles.remove(unverifiedRole);
+              await member.roles.add(verifiedRole);
+              
+              await interaction.reply({
+                content: 'Gratulacje! Jesteś teraz zweryfikowany i możesz widzieć wszystkie kanały.',
+                ephemeral: true,
+              });
+              
+              log(`Verified member: ${member.user?.username}`, 'discord-bot');
+            }
+          } catch (error) {
+            log(`Error verifying member: ${error}`, 'discord-bot');
             await interaction.reply({
-              content: 'Gratulacje! Jesteś teraz zweryfikowany i możesz widzieć wszystkie kanały.',
+              content: 'Coś poszło nie tak podczas weryfikacji.',
               ephemeral: true,
             });
-            
-            log(`Verified member: ${member.user?.username}`, 'discord-bot');
           }
-        } catch (error) {
-          log(`Error verifying member: ${error}`, 'discord-bot');
-          await interaction.reply({
-            content: 'Coś poszło nie tak podczas weryfikacji.',
-            ephemeral: true,
-          });
+        }
+
+        if (interaction.customId === 'open_ticket_button') {
+          const modal = new ModalBuilder()
+            .setCustomId('ticket_modal')
+            .setTitle('Otwórz Ticket');
+
+          const subjectInput = new TextInputBuilder()
+            .setCustomId('ticket_subject')
+            .setLabel('Temat')
+            .setStyle(TextInputStyle.Short)
+            .setPlaceholder('Np. Problem z aplikacją')
+            .setRequired(true);
+
+          const descriptionInput = new TextInputBuilder()
+            .setCustomId('ticket_description')
+            .setLabel('Opis')
+            .setStyle(TextInputStyle.Paragraph)
+            .setPlaceholder('Opisz swój problem...')
+            .setRequired(true);
+
+          const firstRow = new ActionRowBuilder<TextInputBuilder>().addComponents(subjectInput);
+          const secondRow = new ActionRowBuilder<TextInputBuilder>().addComponents(descriptionInput);
+
+          modal.addComponents(firstRow, secondRow);
+          await interaction.showModal(modal);
+        }
+      }
+
+      // Handle modal submissions
+      if (interaction.isModalSubmit()) {
+        if (interaction.customId === 'ticket_modal') {
+          const subject = interaction.fields.getTextInputValue('ticket_subject');
+          const description = interaction.fields.getTextInputValue('ticket_description');
+          const user = interaction.user;
+          const guild = interaction.guild;
+
+          try {
+            await interaction.deferReply({ ephemeral: true });
+
+            // Create a thread in tickety channel for the ticket
+            const ticketyChannel = guild?.channels.cache.find((c) => c.name === 'tickety' && c.isTextBased());
+            if (ticketyChannel && ticketyChannel.isTextBased()) {
+              const thread = await ticketyChannel.threads.create({
+                name: `${subject} - ${user.username}`,
+                autoArchiveDuration: 1440,
+              });
+
+              const embed = new EmbedBuilder()
+                .setTitle(`Ticket: ${subject}`)
+                .setDescription(description)
+                .setAuthor({ name: user.username, iconURL: user.displayAvatarURL() })
+                .setColor(0x5865f2)
+                .setTimestamp();
+
+              await thread.send({
+                embeds: [embed],
+              });
+
+              await interaction.editReply({
+                content: `Ticket został utworzony! Przejdź do: ${thread.url}`,
+              });
+
+              log(`Ticket created: ${subject} by ${user.username}`, 'discord-bot');
+            }
+          } catch (error) {
+            log(`Error creating ticket: ${error}`, 'discord-bot');
+            await interaction.editReply({
+              content: 'Coś poszło nie tak podczas tworzenia ticketu.',
+            });
+          }
         }
       }
     });
