@@ -130,9 +130,13 @@ async function initializeDiscordBot() {
           const hasLegitMessage = messages.some((m) => m.author.id === discordClient!.user!.id);
           
           if (!hasLegitMessage) {
-            const legitmessage = await czyLegitChannel.send(
-              'Czy Mamba obywatel jest legit?\n\n✅ = Tak, legit\n❌ = Nie, scam\n\n⚠️ Głosowanie ❌ bez dowodu skutkuje natychmiastową przerwą z serwera!'
-            );
+            const legitEmbed = new EmbedBuilder()
+              .setColor('#00FF00')
+              .setTitle('✅ Czy nasz serwer fObywatel jest legit?')
+              .setDescription('Reakcja ❌ bez dowodu skutuje natychmiastowa przerwą na okres 7 dni')
+              .setFooter({ text: 'fObywatel' });
+
+            const legitmessage = await czyLegitChannel.send({ embeds: [legitEmbed] });
             
             await legitmessage.react('✅');
             await legitmessage.react('❌');
