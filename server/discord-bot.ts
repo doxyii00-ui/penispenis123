@@ -17,6 +17,7 @@ const CHANNEL_CONFIG = [
 const ROLE_NAMES = {
   VERIFIED: 'Verified',
   UNVERIFIED: 'Unverified',
+  CEO: 'CEO',
 };
 
 let discordClient: Client | null = null;
@@ -76,7 +77,56 @@ async function initializeDiscordBot() {
         log(`Created role: ${ROLE_NAMES.UNVERIFIED}`, 'discord-bot');
       }
 
+      let ceoRole = guild.roles.cache.find((r) => r.name === ROLE_NAMES.CEO);
+      if (!ceoRole) {
+        ceoRole = await guild.roles.create({
+          name: ROLE_NAMES.CEO,
+          reason: 'CEO role - can send messages',
+        });
+        log(`Created role: ${ROLE_NAMES.CEO}`, 'discord-bot');
+      }
+
       log('Bot initialized - no automatic channel creation', 'discord-bot');
+
+      // Set channel permissions - only CEO can send messages
+      try {
+        const allChannels = guild.channels.cache.filter((c) => c.isTextBased());
+        for (const channel of allChannels.values()) {
+          if (channel.isTextBased()) {
+            const readOnlyChannels = ['witamy', 'weryfikacja'];
+            const isReadOnly = readOnlyChannels.includes(channel.name);
+
+            if (isReadOnly) {
+              // witamy and weryfikacja - special channels for unverified users
+              await channel.permissionOverwrites.set([
+                {
+                  id: guild.id,
+                  allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages],
+                },
+              ]);
+            } else {
+              // All other channels - only CEO can send messages
+              await channel.permissionOverwrites.set([
+                {
+                  id: guild.id,
+                  deny: [PermissionFlagsBits.SendMessages],
+                },
+                {
+                  id: verifiedRole.id,
+                  deny: [PermissionFlagsBits.SendMessages],
+                },
+                {
+                  id: ceoRole.id,
+                  allow: [PermissionFlagsBits.SendMessages],
+                },
+              ]);
+            }
+          }
+        }
+        log('Channel permissions set - only CEO can send messages', 'discord-bot');
+      } catch (error) {
+        log(`Error setting channel permissions: ${error}`, 'discord-bot');
+      }
 
       // Post regulamin in regulamin channel
       const regulaminChannel = guild.channels.cache.find((c) => c.name === 'regulamin' && c.isTextBased());
