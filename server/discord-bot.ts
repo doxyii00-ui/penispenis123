@@ -132,15 +132,17 @@ async function initializeDiscordBot() {
           if (!hasLegitMessage) {
             const legitEmbed = new EmbedBuilder()
               .setColor('#00FF00')
-              .setTitle('✅ Czy nasz serwer fObywatel jest legit?')
+              .setTitle('✅ Czy nasz serwer Mamba obywatel jest legit?')
               .setDescription('Reakcja ❌ bez dowodu skutuje natychmiastowa przerwą na okres 7 dni')
-              .setFooter({ text: 'fObywatel' });
+              .setFooter({ text: 'Mamba obywatel' });
 
             const legitmessage = await czyLegitChannel.send({ embeds: [legitEmbed] });
             
             await legitmessage.react('✅');
             await legitmessage.react('❌');
             log('Legit check message posted to #czy-legit', 'discord-bot');
+          } else {
+            log('Legit check message already exists in #czy-legit', 'discord-bot');
           }
         } catch (error) {
           log(`Error posting legit check message: ${error}`, 'discord-bot');
