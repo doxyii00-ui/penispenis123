@@ -136,7 +136,7 @@ async function initializeDiscordBot() {
 
       // Special: Find or create welcome channel and make it writable
       let welcomeChannel = guild.channels.cache.find((c) => c.name === 'il-witamy' && c.isTextBased());
-      if (welcomeChannel && welcomeChannel.isTextBased()) {
+      if (welcomeChannel && welcomeChannel.isTextBased() && 'permissionOverwrites' in welcomeChannel) {
         // Make welcome channel writable
         await welcomeChannel.permissionOverwrites.edit(guild.id, {
           SendMessages: true,
