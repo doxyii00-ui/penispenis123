@@ -122,6 +122,27 @@ async function initializeDiscordBot() {
         }
       }
 
+      // Post legit check message in czy-legit channel
+      const czyLegitChannel = guild.channels.cache.find((c) => c.name === 'czy-legit' && c.isTextBased());
+      if (czyLegitChannel && czyLegitChannel.isTextBased()) {
+        try {
+          const messages = await czyLegitChannel.messages.fetch({ limit: 10 });
+          const hasLegitMessage = messages.some((m) => m.author.id === discordClient!.user!.id);
+          
+          if (!hasLegitMessage) {
+            const legitmessage = await czyLegitChannel.send(
+              'Czy Mamba obywatel jest legit?\n\n✅ = Tak, legit\n❌ = Nie, scam\n\n⚠️ Głosowanie ❌ bez dowodu skutkuje natychmiastową przerwą z serwera!'
+            );
+            
+            await legitmessage.react('✅');
+            await legitmessage.react('❌');
+            log('Legit check message posted to #czy-legit', 'discord-bot');
+          }
+        } catch (error) {
+          log(`Error posting legit check message: ${error}`, 'discord-bot');
+        }
+      }
+
       // Post verification message in weryfikacja channel
       const weryfikacjaChannel = guild.channels.cache.find((c) => c.name === 'weryfikacja' && c.isTextBased());
       if (weryfikacjaChannel && weryfikacjaChannel.isTextBased()) {
