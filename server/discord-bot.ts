@@ -61,27 +61,26 @@ async function initializeDiscordBot() {
 
       log(`Connected to guild: ${guild.name}`, 'discord-bot');
 
-      // Delete all existing channels from categories
+      // Delete all existing channels (both old with "il-" prefix and new ones)
       log('Deleting existing channels...', 'discord-bot');
-      for (const categoryConfig of CHANNEL_CONFIG) {
-        const category = guild.channels.cache.find(
-          (c) => c.type === ChannelType.GuildCategory && c.name === categoryConfig.category
-        );
+      const oldChannelNames = ['il-witamy', 'il-weryfikacja', 'il-regulamin', 'il-ogłoszenia', 'il-konkursy', 'il-boosty', 'il-xd', 'il-ressell-info', 'il-ressell-lista', 'il-legit', 'il-opinie', 'il-czy-legit', 'il-aplikacja', 'il-tickety', 'witamy', 'weryfikacja', 'regulamin', 'ogłoszenia', 'konkursy', 'boosty', 'xd', 'ressell-info', 'ressell-lista', 'legit', 'opinie', 'czy-legit', 'aplikacja', 'tickety'];
+      
+      // Delete all channels with old and new names
+      for (const channelName of oldChannelNames) {
+        const channel = guild.channels.cache.find((c) => c.name === channelName && c.type !== ChannelType.GuildCategory);
+        if (channel) {
+          await channel.delete();
+          log(`Deleted channel: ${channelName}`, 'discord-bot');
+        }
+      }
 
+      // Delete all categories
+      const categoriesToDelete = ['lobby', 'info', 'konkursy', 'boosty', 'xd', 'RESELLER', 'legitki', 'zakup'];
+      for (const categoryName of categoriesToDelete) {
+        const category = guild.channels.cache.find((c) => c.type === ChannelType.GuildCategory && c.name === categoryName);
         if (category) {
-          // Delete all channels in this category
-          for (const channelName of categoryConfig.channels) {
-            const channel = guild.channels.cache.find(
-              (c) => c.name === channelName && c.parent?.id === category.id
-            );
-            if (channel) {
-              await channel.delete();
-              log(`Deleted channel: ${channelName}`, 'discord-bot');
-            }
-          }
-          // Delete the category itself
           await category.delete();
-          log(`Deleted category: ${categoryConfig.category}`, 'discord-bot');
+          log(`Deleted category: ${categoryName}`, 'discord-bot');
         }
       }
 
