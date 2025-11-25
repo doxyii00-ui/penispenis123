@@ -4,15 +4,33 @@ import { log } from './app';
 
 // Discord bot configuration
 const CHANNEL_CONFIG = [
-  { category: 'lobby', channels: ['witamy', 'weryfikacja'] },
-  { category: 'info', channels: ['regulamin', 'ogłoszenia'] },
-  { category: 'konkursy', channels: ['konkursy'] },
-  { category: 'boosty', channels: ['boosty'] },
-  { category: 'xd', channels: ['xd'] },
-  { category: 'RESELLER', channels: ['ressell-info', 'ressell-lista'] },
-  { category: 'legitki', channels: ['legit', 'opinie', 'czy-legit'] },
-  { category: 'zakup', channels: ['aplikacja', 'tickety'] },
+  { category: 'lobby', channels: ['👋-witamy', '✅-weryfikacja'] },
+  { category: 'info', channels: ['📋-regulamin', '📢-ogłoszenia'] },
+  { category: 'konkursy', channels: ['🎁-konkursy'] },
+  { category: 'boosty', channels: ['⭐-boosty'] },
+  { category: 'xd', channels: ['😂-xd'] },
+  { category: 'RESELLER', channels: ['💼-ressell-info', '📝-ressell-lista'] },
+  { category: 'legitki', channels: ['✔️-legit', '💬-opinie', '❓-czy-legit'] },
+  { category: 'zakup', channels: ['📱-aplikacja', '🎫-tickety'] },
 ];
+
+// Map of old channel names to new names with emojis
+const CHANNEL_NAME_MAP: { [key: string]: string } = {
+  'witamy': '👋-witamy',
+  'weryfikacja': '✅-weryfikacja',
+  'regulamin': '📋-regulamin',
+  'ogłoszenia': '📢-ogłoszenia',
+  'konkursy': '🎁-konkursy',
+  'boosty': '⭐-boosty',
+  'xd': '😂-xd',
+  'ressell-info': '💼-ressell-info',
+  'ressell-lista': '📝-ressell-lista',
+  'legit': '✔️-legit',
+  'opinie': '💬-opinie',
+  'czy-legit': '❓-czy-legit',
+  'aplikacja': '📱-aplikacja',
+  'tickety': '🎫-tickety',
+};
 
 const ROLE_NAMES = {
   VERIFIED: 'Verified',
@@ -88,12 +106,29 @@ async function initializeDiscordBot() {
 
       log('Bot initialized - no automatic channel creation', 'discord-bot');
 
+      // Rename channels to add emojis
+      try {
+        const allChannels = guild.channels.cache.filter((c) => c.isTextBased());
+        for (const channel of allChannels.values()) {
+          if (channel.isTextBased()) {
+            const oldName = channel.name;
+            const newName = CHANNEL_NAME_MAP[oldName];
+            if (newName && channel.name !== newName) {
+              await channel.setName(newName);
+              log(`Renamed channel: ${oldName} -> ${newName}`, 'discord-bot');
+            }
+          }
+        }
+      } catch (error) {
+        log(`Error renaming channels: ${error}`, 'discord-bot');
+      }
+
       // Set channel permissions - only CEO can send messages
       try {
         const allChannels = guild.channels.cache.filter((c) => c.isTextBased());
         for (const channel of allChannels.values()) {
           if (channel.isTextBased()) {
-            const readOnlyChannels = ['witamy', 'weryfikacja'];
+            const readOnlyChannels = ['👋-witamy', '✅-weryfikacja'];
             const isReadOnly = readOnlyChannels.includes(channel.name);
 
             if (isReadOnly) {
@@ -129,7 +164,7 @@ async function initializeDiscordBot() {
       }
 
       // Post regulamin in regulamin channel
-      const regulaminChannel = guild.channels.cache.find((c) => c.name === 'regulamin' && c.isTextBased());
+      const regulaminChannel = guild.channels.cache.find((c) => c.name === '📋-regulamin' && c.isTextBased());
       if (regulaminChannel && regulaminChannel.isTextBased()) {
         try {
           const messages = await regulaminChannel.messages.fetch({ limit: 10 });
@@ -173,7 +208,7 @@ async function initializeDiscordBot() {
       }
 
       // Post legit check message in czy-legit channel
-      const czyLegitChannel = guild.channels.cache.find((c) => c.name === 'czy-legit' && c.isTextBased());
+      const czyLegitChannel = guild.channels.cache.find((c) => c.name === '❓-czy-legit' && c.isTextBased());
       if (czyLegitChannel && czyLegitChannel.isTextBased()) {
         try {
           const messages = await czyLegitChannel.messages.fetch({ limit: 10 });
@@ -200,7 +235,7 @@ async function initializeDiscordBot() {
       }
 
       // Post verification message in weryfikacja channel
-      const weryfikacjaChannel = guild.channels.cache.find((c) => c.name === 'weryfikacja' && c.isTextBased());
+      const weryfikacjaChannel = guild.channels.cache.find((c) => c.name === '✅-weryfikacja' && c.isTextBased());
       if (weryfikacjaChannel && weryfikacjaChannel.isTextBased()) {
         try {
           const messages = await weryfikacjaChannel.messages.fetch({ limit: 10 });
@@ -233,7 +268,7 @@ async function initializeDiscordBot() {
       }
 
       // Post ticket message in tickety channel
-      const ticketyChannel = guild.channels.cache.find((c) => c.name === 'tickety' && c.isTextBased());
+      const ticketyChannel = guild.channels.cache.find((c) => c.name === '🎫-tickety' && c.isTextBased());
       if (ticketyChannel && ticketyChannel.isTextBased()) {
         try {
           const messages = await ticketyChannel.messages.fetch({ limit: 10 });
