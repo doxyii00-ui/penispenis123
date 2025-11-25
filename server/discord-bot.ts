@@ -92,16 +92,6 @@ async function initializeDiscordBot() {
               .setDescription('Warunki korzystania z tego serwera Discord')
               .addFields(
                 {
-                  name: 'Szacunek i Profesjonalizm',
-                  value: 'Wszystkie interakcje muszą odbywać się z wzajemnym szacunkiem. Zachowuję się profesjonalnie wobec innych członków.',
-                  inline: false,
-                },
-                {
-                  name: 'Zakaz Spamu i Niechcianych Treści',
-                  value: 'Nie dozwolone są wiadomości spamowe, floody, powielane wiadomości ani niezaaprobowane reklamy.',
-                  inline: false,
-                },
-                {
                   name: 'Bezpieczeństwo i Prywatność',
                   value: 'Nie udostępniać danych osobowych, haseł ani podejrzanych linków. Szanować prywatność innych użytkowników.',
                   inline: false,
@@ -109,11 +99,6 @@ async function initializeDiscordBot() {
                 {
                   name: 'Zgodność z Kanałami',
                   value: 'Każdy kanał ma określony cel. Treści powinny być zgodne z przeznaczeniem kanału.',
-                  inline: false,
-                },
-                {
-                  name: 'Zakaz Niedozwolonych Treści',
-                  value: 'Nie publikować treści NSFW, rasistowskich, seksistowskich ani innych dyskryminacyjnych materiałów.',
                   inline: false,
                 },
                 {
