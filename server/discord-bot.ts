@@ -87,53 +87,47 @@ async function initializeDiscordBot() {
           
           if (!hasRegulamin) {
             const regulaminEmbed = new EmbedBuilder()
-              .setColor('#FF6B00')
-              .setTitle('📜 Regulamin Serwera - Mamba fObywatel')
-              .setDescription('Przeczytaj uważnie! Łamanie zasad może skutkować wyrzuceniem z serwera.')
+              .setColor('#2C3E50')
+              .setTitle('Regulamin Serwera')
+              .setDescription('Warunki korzystania z tego serwera Discord')
               .addFields(
                 {
-                  name: '1️⃣ Szacunek i Tolerancja',
-                  value: 'Traktuj wszystkich członków z szacunkiem. Brak przemocy słownej, rasizmu, seksizmu lub hejtu.',
+                  name: 'Szacunek i Profesjonalizm',
+                  value: 'Wszystkie interakcje muszą odbywać się z wzajemnym szacunkiem. Zachowuję się profesjonalnie wobec innych członków.',
                   inline: false,
                 },
                 {
-                  name: '2️⃣ Brak Spamu i Flood\'u',
-                  value: 'Nie wysyłaj wiadomości masowo, nie flooduj, nie spamuj linków ani reklam bez pozwolenia.',
+                  name: 'Zakaz Spamu i Niechcianych Treści',
+                  value: 'Nie dozwolone są wiadomości spamowe, floody, powielane wiadomości ani niezaaprobowane reklamy.',
                   inline: false,
                 },
                 {
-                  name: '3️⃣ Bezpieczeństwo Danych',
-                  value: 'Nigdy nie udostępniaj haseł, danych osobowych ani linków z malware\'em.',
+                  name: 'Bezpieczeństwo i Prywatność',
+                  value: 'Nie udostępniać danych osobowych, haseł ani podejrzanych linków. Szanować prywatność innych użytkowników.',
                   inline: false,
                 },
                 {
-                  name: '4️⃣ Kanały dla Wszystkich',
-                  value: 'Pisz na odpowiednich kanałach. Nie wysyłaj NSFW, treści dla dorosłych ani nieodpowiednich treści.',
+                  name: 'Zgodność z Kanałami',
+                  value: 'Każdy kanał ma określony cel. Treści powinny być zgodne z przeznaczeniem kanału.',
                   inline: false,
                 },
                 {
-                  name: '5️⃣ Czytaj Opisy Kanałów',
-                  value: 'Każdy kanał ma swój cel. Zapoznaj się z opisami przed wiadomościami.',
+                  name: 'Zakaz Niedozwolonych Treści',
+                  value: 'Nie publikować treści NSFW, rasistowskich, seksistowskich ani innych dyskryminacyjnych materiałów.',
                   inline: false,
                 },
                 {
-                  name: '6️⃣ Wsparcie i Tickety',
-                  value: 'Masz problem? Użyj `/ticket` aby otworzyć zgłoszenie. Nasz zespół Ci pomoże!',
+                  name: 'System Wsparcia',
+                  value: 'W przypadku problemu lub pytania użyj komendy /ticket aby skontaktować się z administracją.',
                   inline: false,
                 },
                 {
-                  name: '7️⃣ Brak Reklam',
-                  value: 'Nie promuj innych serwerów, botów czy serwisów bez zgody administracji.',
-                  inline: false,
-                },
-                {
-                  name: '✅ Ostateczna Zasada',
-                  value: 'Baw się dobrze i bądź miły dla wszystkich! 🎮',
+                  name: 'Konsekwencje Naruszenia',
+                  value: 'Niesprzestrzeganie regulaminu może skutkować wyciszeniem, zawieszeniem lub usunięciem z serwera.',
                   inline: false,
                 }
               )
-              .setFooter({ text: 'Mamba fObywatel Community • Słowa złote, czyny złociste 👑' })
-              .setTimestamp();
+              .setFooter({ text: 'Mamba fObywatel • Ostatnia aktualizacja: ' + new Date().toLocaleDateString('pl-PL') });
 
             await regulaminChannel.send({ embeds: [regulaminEmbed] });
             log('Regulamin posted to #regulamin', 'discord-bot');
