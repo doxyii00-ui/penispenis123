@@ -6,21 +6,21 @@ import { log } from './app';
 // These are the channels that will be created on bot startup
 const CHANNEL_CONFIG = [
   // lobby category
-  { category: 'lobby', channels: ['il-witamy', 'il-weryfikacja'] },
+  { category: 'lobby', channels: ['witamy', 'weryfikacja'] },
   // info category
-  { category: 'info', channels: ['il-regulamin', 'il-ogłoszenia'] },
+  { category: 'info', channels: ['regulamin', 'ogłoszenia'] },
   // konkursy category
-  { category: 'konkursy', channels: ['il-konkursy'] },
+  { category: 'konkursy', channels: ['konkursy'] },
   // boosty category
-  { category: 'boosty', channels: ['il-boosty'] },
+  { category: 'boosty', channels: ['boosty'] },
   // xd category
-  { category: 'xd', channels: ['il-xd'] },
+  { category: 'xd', channels: ['xd'] },
   // RESELLER category
-  { category: 'RESELLER', channels: ['il-ressell-info', 'il-ressell-lista'] },
+  { category: 'RESELLER', channels: ['ressell-info', 'ressell-lista'] },
   // legitki category
-  { category: 'legitki', channels: ['il-legit', 'il-opinie', 'il-czy-legit'] },
+  { category: 'legitki', channels: ['legit', 'opinie', 'czy-legit'] },
   // zakup category
-  { category: 'zakup', channels: ['il-aplikacja', 'il-tickety'] },
+  { category: 'zakup', channels: ['aplikacja', 'tickety'] },
 ];
 
 let discordClient: Client | null = null;
@@ -111,7 +111,7 @@ async function initializeDiscordBot() {
       }
 
       // Special: Find or create welcome channel and make it writable
-      let welcomeChannel = guild.channels.cache.find((c) => c.name === 'il-witamy' && c.isTextBased());
+      let welcomeChannel = guild.channels.cache.find((c) => c.name === 'witamy' && c.isTextBased());
       if (welcomeChannel && welcomeChannel.isTextBased() && 'permissionOverwrites' in welcomeChannel) {
         // Make welcome channel writable
         await welcomeChannel.permissionOverwrites.edit(guild.id, {
