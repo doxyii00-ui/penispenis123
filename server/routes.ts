@@ -3,11 +3,16 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // put application routes here
-  // prefix all routes with /api
+  // API endpoint to get all channels
+  app.get("/api/channels", async (_req, res) => {
+    const channels = await storage.getAllChannels();
+    res.json(channels);
+  });
 
-  // use storage to perform CRUD operations on the storage interface
-  // e.g. storage.insertUser(user) or storage.getUserByUsername(username)
+  // API endpoint to get bot status
+  app.get("/api/bot/status", (_req, res) => {
+    res.json({ status: "running" });
+  });
 
   const httpServer = createServer(app);
 

@@ -2,6 +2,7 @@ import { type Server } from "node:http";
 
 import express, { type Express, type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
+import { startDiscordBot } from "./discord-bot";
 
 export function log(message: string, source = "express") {
   const formattedTime = new Date().toLocaleTimeString("en-US", {
@@ -70,6 +71,13 @@ export default async function runApp(
     res.status(status).json({ message });
     throw err;
   });
+
+  // Start Discord bot
+  try {
+    await startDiscordBot();
+  } catch (error) {
+    log(`Discord bot failed to start: ${error}`, 'app');
+  }
 
   // importantly run the final setup after setting up all the other routes so
   // the catch-all route doesn't interfere with the other routes
