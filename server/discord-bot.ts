@@ -76,66 +76,7 @@ async function initializeDiscordBot() {
         log(`Created role: ${ROLE_NAMES.UNVERIFIED}`, 'discord-bot');
       }
 
-      // Create channels only if they don't exist (don't delete, don't recreate)
-      log('Checking and creating channels if needed...', 'discord-bot');
-      for (const categoryConfig of CHANNEL_CONFIG) {
-        // Find or create category
-        let category = guild.channels.cache.find((c) => c.type === ChannelType.GuildCategory && c.name === categoryConfig.category);
-        
-        if (!category) {
-          category = await guild.channels.create({
-            name: categoryConfig.category,
-            type: ChannelType.GuildCategory,
-          });
-          log(`Created category: ${categoryConfig.category}`, 'discord-bot');
-        }
-
-        for (const channelName of categoryConfig.channels) {
-          // Check if channel already exists
-          const existingChannel = guild.channels.cache.find((c) => c.name === channelName && c.parent?.id === category.id);
-          
-          if (!existingChannel) {
-            // Special handling for witamy and weryfikacja - visible to everyone
-            const isSpecialChannel = channelName === 'witamy' || channelName === 'weryfikacja';
-
-            let permissionOverwrites: any[] = [];
-            
-            if (isSpecialChannel) {
-              // Witamy and weryfikacja are visible to everyone
-              permissionOverwrites = [
-                {
-                  id: guild.id,
-                  allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages],
-                },
-              ];
-            } else {
-              // Other channels: only verified can see
-              permissionOverwrites = [
-                {
-                  id: guild.id,
-                  deny: [PermissionFlagsBits.ViewChannel],
-                },
-                {
-                  id: verifiedRole.id,
-                  allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages],
-                },
-              ];
-            }
-
-            const channel = await guild.channels.create({
-              name: channelName,
-              type: ChannelType.GuildText,
-              parent: category.id,
-              permissionOverwrites,
-            });
-            log(`Created channel: ${channelName}`, 'discord-bot');
-          } else {
-            log(`Channel already exists: ${channelName}`, 'discord-bot');
-          }
-        }
-      }
-
-      log('Channel setup complete', 'discord-bot');
+      log('Bot initialized - no automatic channel creation', 'discord-bot');
 
       // Post verification message in weryfikacja channel
       const weryfikacjaChannel = guild.channels.cache.find((c) => c.name === 'weryfikacja' && c.isTextBased());
