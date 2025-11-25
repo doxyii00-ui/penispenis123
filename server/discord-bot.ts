@@ -61,42 +61,55 @@ async function initializeDiscordBot() {
 
       log(`Connected to guild: ${guild.name}`, 'discord-bot');
 
-      // Create or update channels
+      // Delete all existing channels from categories
+      log('Deleting existing channels...', 'discord-bot');
       for (const categoryConfig of CHANNEL_CONFIG) {
-        // Create or get category
-        let category = guild.channels.cache.find(
+        const category = guild.channels.cache.find(
           (c) => c.type === ChannelType.GuildCategory && c.name === categoryConfig.category
         );
 
-        if (!category) {
-          category = await guild.channels.create({
-            name: categoryConfig.category,
-            type: ChannelType.GuildCategory,
-          });
-          log(`Created category: ${categoryConfig.category}`, 'discord-bot');
+        if (category) {
+          // Delete all channels in this category
+          for (const channelName of categoryConfig.channels) {
+            const channel = guild.channels.cache.find(
+              (c) => c.name === channelName && c.parent?.id === category.id
+            );
+            if (channel) {
+              await channel.delete();
+              log(`Deleted channel: ${channelName}`, 'discord-bot');
+            }
+          }
+          // Delete the category itself
+          await category.delete();
+          log(`Deleted category: ${categoryConfig.category}`, 'discord-bot');
         }
+      }
+
+      // Create or update channels
+      log('Creating fresh channels...', 'discord-bot');
+      for (const categoryConfig of CHANNEL_CONFIG) {
+        // Create category
+        const category = await guild.channels.create({
+          name: categoryConfig.category,
+          type: ChannelType.GuildCategory,
+        });
+        log(`Created category: ${categoryConfig.category}`, 'discord-bot');
 
         // Create channels in category
         for (const channelName of categoryConfig.channels) {
-          let channel = guild.channels.cache.find(
-            (c) => c.name === channelName && c.parent?.id === category.id
-          );
-
-          if (!channel) {
-            channel = await guild.channels.create({
-              name: channelName,
-              type: ChannelType.GuildText,
-              parent: category.id,
-              permissionOverwrites: [
-                {
-                  id: guild.id,
-                  deny: [PermissionFlagsBits.SendMessages],
-                  allow: [PermissionFlagsBits.ViewChannel],
-                },
-              ],
-            });
-            log(`Created channel: ${channelName}`, 'discord-bot');
-          }
+          const channel = await guild.channels.create({
+            name: channelName,
+            type: ChannelType.GuildText,
+            parent: category.id,
+            permissionOverwrites: [
+              {
+                id: guild.id,
+                deny: [PermissionFlagsBits.SendMessages],
+                allow: [PermissionFlagsBits.ViewChannel],
+              },
+            ],
+          });
+          log(`Created channel: ${channelName}`, 'discord-bot');
 
           // Store channel info in database
           await storage.createChannel({
@@ -110,7 +123,7 @@ async function initializeDiscordBot() {
         }
       }
 
-      // Special: Find or create welcome channel and make it writable
+      // Special: Find and make welcome channel writable
       let welcomeChannel = guild.channels.cache.find((c) => c.name === 'witamy' && c.isTextBased());
       if (welcomeChannel && welcomeChannel.isTextBased() && 'permissionOverwrites' in welcomeChannel) {
         // Make welcome channel writable
