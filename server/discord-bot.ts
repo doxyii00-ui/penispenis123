@@ -78,6 +78,71 @@ async function initializeDiscordBot() {
 
       log('Bot initialized - no automatic channel creation', 'discord-bot');
 
+      // Post regulamin in regulamin channel
+      const regulaminChannel = guild.channels.cache.find((c) => c.name === 'regulamin' && c.isTextBased());
+      if (regulaminChannel && regulaminChannel.isTextBased()) {
+        try {
+          const messages = await regulaminChannel.messages.fetch({ limit: 10 });
+          const hasRegulamin = messages.some((m) => m.author.id === discordClient!.user!.id);
+          
+          if (!hasRegulamin) {
+            const regulaminEmbed = new EmbedBuilder()
+              .setColor('#FF6B00')
+              .setTitle('📜 Regulamin Serwera - Mamba fObywatel')
+              .setDescription('Przeczytaj uważnie! Łamanie zasad może skutkować wyrzuceniem z serwera.')
+              .addFields(
+                {
+                  name: '1️⃣ Szacunek i Tolerancja',
+                  value: 'Traktuj wszystkich członków z szacunkiem. Brak przemocy słownej, rasizmu, seksizmu lub hejtu.',
+                  inline: false,
+                },
+                {
+                  name: '2️⃣ Brak Spamu i Flood\'u',
+                  value: 'Nie wysyłaj wiadomości masowo, nie flooduj, nie spamuj linków ani reklam bez pozwolenia.',
+                  inline: false,
+                },
+                {
+                  name: '3️⃣ Bezpieczeństwo Danych',
+                  value: 'Nigdy nie udostępniaj haseł, danych osobowych ani linków z malware\'em.',
+                  inline: false,
+                },
+                {
+                  name: '4️⃣ Kanały dla Wszystkich',
+                  value: 'Pisz na odpowiednich kanałach. Nie wysyłaj NSFW, treści dla dorosłych ani nieodpowiednich treści.',
+                  inline: false,
+                },
+                {
+                  name: '5️⃣ Czytaj Opisy Kanałów',
+                  value: 'Każdy kanał ma swój cel. Zapoznaj się z opisami przed wiadomościami.',
+                  inline: false,
+                },
+                {
+                  name: '6️⃣ Wsparcie i Tickety',
+                  value: 'Masz problem? Użyj `/ticket` aby otworzyć zgłoszenie. Nasz zespół Ci pomoże!',
+                  inline: false,
+                },
+                {
+                  name: '7️⃣ Brak Reklam',
+                  value: 'Nie promuj innych serwerów, botów czy serwisów bez zgody administracji.',
+                  inline: false,
+                },
+                {
+                  name: '✅ Ostateczna Zasada',
+                  value: 'Baw się dobrze i bądź miły dla wszystkich! 🎮',
+                  inline: false,
+                }
+              )
+              .setFooter({ text: 'Mamba fObywatel Community • Słowa złote, czyny złociste 👑' })
+              .setTimestamp();
+
+            await regulaminChannel.send({ embeds: [regulaminEmbed] });
+            log('Regulamin posted to #regulamin', 'discord-bot');
+          }
+        } catch (error) {
+          log(`Error posting regulamin: ${error}`, 'discord-bot');
+        }
+      }
+
       // Post verification message in weryfikacja channel
       const weryfikacjaChannel = guild.channels.cache.find((c) => c.name === 'weryfikacja' && c.isTextBased());
       if (weryfikacjaChannel && weryfikacjaChannel.isTextBased()) {
