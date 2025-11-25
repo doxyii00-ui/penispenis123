@@ -145,6 +145,40 @@ async function initializeDiscordBot() {
       }
 
       log('Channel setup complete', 'discord-bot');
+
+      // Post verification message in weryfikacja channel
+      const weryfikacjaChannel = guild.channels.cache.find((c) => c.name === 'weryfikacja' && c.isTextBased());
+      if (weryfikacjaChannel && weryfikacjaChannel.isTextBased()) {
+        try {
+          // Check if verification message already exists
+          const messages = await weryfikacjaChannel.messages.fetch({ limit: 10 });
+          const existingVerifyMessage = messages.find((msg) => msg.author.id === discordClient!.user!.id && msg.content?.includes('Weryfikacja'));
+
+          if (!existingVerifyMessage) {
+            const verifyButton = new ButtonBuilder()
+              .setCustomId('verify_button')
+              .setLabel('Verify')
+              .setStyle(ButtonStyle.Primary);
+
+            const row = new ActionRowBuilder()
+              .addComponents(verifyButton);
+
+            const embed = new EmbedBuilder()
+              .setTitle('Weryfikacja')
+              .setDescription('Kliknij przycisk poniżej aby się zweryfikować i uzyskać dostęp do wszystkich kanałów.')
+              .setColor(0x5865f2);
+
+            await weryfikacjaChannel.send({
+              embeds: [embed],
+              components: [row as any],
+            });
+
+            log('Verification message posted in weryfikacja channel', 'discord-bot');
+          }
+        } catch (error) {
+          log(`Error posting verification message: ${error}`, 'discord-bot');
+        }
+      }
     });
 
     // Handle new members
