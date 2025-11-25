@@ -209,6 +209,16 @@ async function initializeDiscordBot() {
           new SlashCommandBuilder()
             .setName('ticket')
             .setDescription('Otwórz nowy ticket'),
+          new SlashCommandBuilder()
+            .setName('setticketmessage')
+            .setDescription('Ustaw wiadomość dla ticketów (tylko admini)')
+            .addStringOption((option) =>
+              option
+                .setName('message')
+                .setDescription('Wiadomość która pojawi się przy otwieraniu ticketa')
+                .setRequired(true)
+            )
+            .setDefaultMemberPermissions(8), // ADMINISTRATOR permission
         ];
 
         const rest = new REST({ version: '10' }).setToken(token);
@@ -297,6 +307,29 @@ async function initializeDiscordBot() {
           modal.addComponents(firstRow, secondRow);
           await interaction.showModal(modal);
         }
+
+        if (interaction.commandName === 'setticketmessage') {
+          const message = interaction.options.getString('message');
+          if (!message) {
+            await interaction.reply({
+              content: 'Musisz podać wiadomość!',
+              ephemeral: true,
+            });
+            return;
+          }
+
+          await storage.setTicketSettings({
+            guildId: interaction.guildId!,
+            message,
+          });
+
+          await interaction.reply({
+            content: `✅ Wiadomość ticketa została zmieniona na:\n\n"${message}"`,
+            ephemeral: true,
+          });
+
+          log(`Ticket message updated by ${interaction.user.username}: ${message}`, 'discord-bot');
+        }
       }
 
       // Handle button clicks
@@ -330,6 +363,9 @@ async function initializeDiscordBot() {
         }
 
         if (interaction.customId === 'open_ticket_button') {
+          const ticketSettings = await storage.getTicketSettings(interaction.guildId!);
+          const placeholderText = ticketSettings?.message || 'Opisz swój problem...';
+
           const modal = new ModalBuilder()
             .setCustomId('ticket_modal')
             .setTitle('Otwórz Ticket');
@@ -345,7 +381,7 @@ async function initializeDiscordBot() {
             .setCustomId('ticket_description')
             .setLabel('Opis')
             .setStyle(TextInputStyle.Paragraph)
-            .setPlaceholder('Opisz swój problem...')
+            .setPlaceholder(placeholderText)
             .setRequired(true);
 
           const firstRow = new ActionRowBuilder<TextInputBuilder>().addComponents(subjectInput);

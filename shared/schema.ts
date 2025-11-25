@@ -26,7 +26,19 @@ export const insertChannelSchema = createInsertSchema(channels).omit({
   id: true,
 });
 
+export const ticketSettings = pgTable("ticket_settings", {
+  id: serial("id").primaryKey(),
+  guildId: text("guild_id").notNull().unique(),
+  message: text("message").notNull().default("Opisz swój problem..."),
+});
+
+export const insertTicketSettingSchema = createInsertSchema(ticketSettings).omit({
+  id: true,
+});
+
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
 export type InsertChannel = z.infer<typeof insertChannelSchema>;
 export type Channel = typeof channels.$inferSelect;
+export type InsertTicketSetting = z.infer<typeof insertTicketSettingSchema>;
+export type TicketSetting = typeof ticketSettings.$inferSelect;
