@@ -76,71 +76,62 @@ async function initializeDiscordBot() {
         log(`Created role: ${ROLE_NAMES.UNVERIFIED}`, 'discord-bot');
       }
 
-      // Delete all existing channels and categories
-      log('Deleting existing channels...', 'discord-bot');
-      const oldChannelNames = ['il-witamy', 'il-weryfikacja', 'il-regulamin', 'il-ogłoszenia', 'il-konkursy', 'il-boosty', 'il-xd', 'il-ressell-info', 'il-ressell-lista', 'il-legit', 'il-opinie', 'il-czy-legit', 'il-aplikacja', 'il-tickety', 'witamy', 'weryfikacja', 'regulamin', 'ogłoszenia', 'konkursy', 'boosty', 'xd', 'ressell-info', 'ressell-lista', 'legit', 'opinie', 'czy-legit', 'aplikacja', 'tickety'];
-      
-      for (const channelName of oldChannelNames) {
-        const channel = guild.channels.cache.find((c) => c.name === channelName && c.type !== ChannelType.GuildCategory);
-        if (channel) {
-          await channel.delete();
-          log(`Deleted channel: ${channelName}`, 'discord-bot');
-        }
-      }
-
-      const categoriesToDelete = ['lobby', 'info', 'konkursy', 'boosty', 'xd', 'RESELLER', 'legitki', 'zakup'];
-      for (const categoryName of categoriesToDelete) {
-        const category = guild.channels.cache.find((c) => c.type === ChannelType.GuildCategory && c.name === categoryName);
-        if (category) {
-          await category.delete();
-          log(`Deleted category: ${categoryName}`, 'discord-bot');
-        }
-      }
-
-      // Create channels with proper permissions
-      log('Creating fresh channels...', 'discord-bot');
+      // Create channels only if they don't exist (don't delete, don't recreate)
+      log('Checking and creating channels if needed...', 'discord-bot');
       for (const categoryConfig of CHANNEL_CONFIG) {
-        const category = await guild.channels.create({
-          name: categoryConfig.category,
-          type: ChannelType.GuildCategory,
-        });
-        log(`Created category: ${categoryConfig.category}`, 'discord-bot');
+        // Find or create category
+        let category = guild.channels.cache.find((c) => c.type === ChannelType.GuildCategory && c.name === categoryConfig.category);
+        
+        if (!category) {
+          category = await guild.channels.create({
+            name: categoryConfig.category,
+            type: ChannelType.GuildCategory,
+          });
+          log(`Created category: ${categoryConfig.category}`, 'discord-bot');
+        }
 
         for (const channelName of categoryConfig.channels) {
-          // Special handling for witamy and weryfikacja - visible to everyone but unverified can only see them
-          const isSpecialChannel = channelName === 'witamy' || channelName === 'weryfikacja';
-
-          let permissionOverwrites: any[] = [];
+          // Check if channel already exists
+          const existingChannel = guild.channels.cache.find((c) => c.name === channelName && c.parent?.id === category.id);
           
-          if (isSpecialChannel) {
-            // Witamy and weryfikacja are visible to everyone
-            permissionOverwrites = [
-              {
-                id: guild.id,
-                allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages],
-              },
-            ];
-          } else {
-            // Other channels: only verified can see
-            permissionOverwrites = [
-              {
-                id: guild.id,
-                deny: [PermissionFlagsBits.ViewChannel],
-              },
-              {
-                id: verifiedRole.id,
-                allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages],
-              },
-            ];
-          }
+          if (!existingChannel) {
+            // Special handling for witamy and weryfikacja - visible to everyone
+            const isSpecialChannel = channelName === 'witamy' || channelName === 'weryfikacja';
 
-          const channel = await guild.channels.create({
-            name: channelName,
-            type: ChannelType.GuildText,
-            parent: category.id,
-            permissionOverwrites,
-          });
-          log(`Created channel: ${channelName}`, 'discord-bot');
+            let permissionOverwrites: any[] = [];
+            
+            if (isSpecialChannel) {
+              // Witamy and weryfikacja are visible to everyone
+              permissionOverwrites = [
+                {
+                  id: guild.id,
+                  allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages],
+                },
+              ];
+            } else {
+              // Other channels: only verified can see
+              permissionOverwrites = [
+                {
+                  id: guild.id,
+                  deny: [PermissionFlagsBits.ViewChannel],
+                },
+                {
+                  id: verifiedRole.id,
+                  allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages],
+                },
+              ];
+            }
+
+            const channel = await guild.channels.create({
+              name: channelName,
+              type: ChannelType.GuildText,
+              parent: category.id,
+              permissionOverwrites,
+            });
+            log(`Created channel: ${channelName}`, 'discord-bot');
+          } else {
+            log(`Channel already exists: ${channelName}`, 'discord-bot');
+          }
         }
       }
 
