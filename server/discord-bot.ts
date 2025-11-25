@@ -1,27 +1,23 @@
-import { Client, GatewayIntentBits, ChannelType, PermissionFlagsBits } from 'discord.js';
+import { Client, GatewayIntentBits, ChannelType, PermissionFlagsBits, ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } from 'discord.js';
 import { storage } from './storage';
 import { log } from './app';
 
 // Discord bot configuration
-// These are the channels that will be created on bot startup
 const CHANNEL_CONFIG = [
-  // lobby category
   { category: 'lobby', channels: ['witamy', 'weryfikacja'] },
-  // info category
   { category: 'info', channels: ['regulamin', 'ogłoszenia'] },
-  // konkursy category
   { category: 'konkursy', channels: ['konkursy'] },
-  // boosty category
   { category: 'boosty', channels: ['boosty'] },
-  // xd category
   { category: 'xd', channels: ['xd'] },
-  // RESELLER category
   { category: 'RESELLER', channels: ['ressell-info', 'ressell-lista'] },
-  // legitki category
   { category: 'legitki', channels: ['legit', 'opinie', 'czy-legit'] },
-  // zakup category
   { category: 'zakup', channels: ['aplikacja', 'tickety'] },
 ];
+
+const ROLE_NAMES = {
+  VERIFIED: 'Verified',
+  UNVERIFIED: 'Unverified',
+};
 
 let discordClient: Client | null = null;
 
@@ -44,6 +40,7 @@ async function initializeDiscordBot() {
         GatewayIntentBits.Guilds,
         GatewayIntentBits.GuildMembers,
         GatewayIntentBits.GuildMessages,
+        GatewayIntentBits.MessageContent,
       ],
     });
 
@@ -52,7 +49,6 @@ async function initializeDiscordBot() {
       
       if (!discordClient) return;
 
-      // Get the guild (server)
       const guild = discordClient.guilds.cache.first();
       if (!guild) {
         log('No guild found', 'discord-bot');
@@ -61,11 +57,29 @@ async function initializeDiscordBot() {
 
       log(`Connected to guild: ${guild.name}`, 'discord-bot');
 
-      // Delete all existing channels (both old with "il-" prefix and new ones)
+      // Create or get verified/unverified roles
+      let verifiedRole = guild.roles.cache.find((r) => r.name === ROLE_NAMES.VERIFIED);
+      if (!verifiedRole) {
+        verifiedRole = await guild.roles.create({
+          name: ROLE_NAMES.VERIFIED,
+          reason: 'Verified members',
+        });
+        log(`Created role: ${ROLE_NAMES.VERIFIED}`, 'discord-bot');
+      }
+
+      let unverifiedRole = guild.roles.cache.find((r) => r.name === ROLE_NAMES.UNVERIFIED);
+      if (!unverifiedRole) {
+        unverifiedRole = await guild.roles.create({
+          name: ROLE_NAMES.UNVERIFIED,
+          reason: 'Unverified members',
+        });
+        log(`Created role: ${ROLE_NAMES.UNVERIFIED}`, 'discord-bot');
+      }
+
+      // Delete all existing channels and categories
       log('Deleting existing channels...', 'discord-bot');
       const oldChannelNames = ['il-witamy', 'il-weryfikacja', 'il-regulamin', 'il-ogłoszenia', 'il-konkursy', 'il-boosty', 'il-xd', 'il-ressell-info', 'il-ressell-lista', 'il-legit', 'il-opinie', 'il-czy-legit', 'il-aplikacja', 'il-tickety', 'witamy', 'weryfikacja', 'regulamin', 'ogłoszenia', 'konkursy', 'boosty', 'xd', 'ressell-info', 'ressell-lista', 'legit', 'opinie', 'czy-legit', 'aplikacja', 'tickety'];
       
-      // Delete all channels with old and new names
       for (const channelName of oldChannelNames) {
         const channel = guild.channels.cache.find((c) => c.name === channelName && c.type !== ChannelType.GuildCategory);
         if (channel) {
@@ -74,7 +88,6 @@ async function initializeDiscordBot() {
         }
       }
 
-      // Delete all categories
       const categoriesToDelete = ['lobby', 'info', 'konkursy', 'boosty', 'xd', 'RESELLER', 'legitki', 'zakup'];
       for (const categoryName of categoriesToDelete) {
         const category = guild.channels.cache.find((c) => c.type === ChannelType.GuildCategory && c.name === categoryName);
@@ -84,69 +97,131 @@ async function initializeDiscordBot() {
         }
       }
 
-      // Create or update channels
+      // Create channels with proper permissions
       log('Creating fresh channels...', 'discord-bot');
       for (const categoryConfig of CHANNEL_CONFIG) {
-        // Create category
         const category = await guild.channels.create({
           name: categoryConfig.category,
           type: ChannelType.GuildCategory,
         });
         log(`Created category: ${categoryConfig.category}`, 'discord-bot');
 
-        // Create channels in category
         for (const channelName of categoryConfig.channels) {
+          // Special handling for witamy and weryfikacja - visible to everyone but unverified can only see them
+          const isSpecialChannel = channelName === 'witamy' || channelName === 'weryfikacja';
+
+          let permissionOverwrites: any[] = [];
+          
+          if (isSpecialChannel) {
+            // Witamy and weryfikacja are visible to everyone
+            permissionOverwrites = [
+              {
+                id: guild.id,
+                allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages],
+              },
+            ];
+          } else {
+            // Other channels: only verified can see
+            permissionOverwrites = [
+              {
+                id: guild.id,
+                deny: [PermissionFlagsBits.ViewChannel],
+              },
+              {
+                id: verifiedRole.id,
+                allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages],
+              },
+            ];
+          }
+
           const channel = await guild.channels.create({
             name: channelName,
             type: ChannelType.GuildText,
             parent: category.id,
-            permissionOverwrites: [
-              {
-                id: guild.id,
-                deny: [PermissionFlagsBits.SendMessages],
-                allow: [PermissionFlagsBits.ViewChannel],
-              },
-            ],
+            permissionOverwrites,
           });
           log(`Created channel: ${channelName}`, 'discord-bot');
-
-          // Store channel info in database
-          await storage.createChannel({
-            discordChannelId: channel.id,
-            name: channelName,
-            category: categoryConfig.category,
-            readOnly: true,
-          }).catch(() => {
-            // Channel already exists in DB, that's fine
-          });
         }
       }
 
-      // Special: Find and make welcome channel writable
-      let welcomeChannel = guild.channels.cache.find((c) => c.name === 'witamy' && c.isTextBased());
-      if (welcomeChannel && welcomeChannel.isTextBased() && 'permissionOverwrites' in welcomeChannel) {
-        // Make welcome channel writable
-        await welcomeChannel.permissionOverwrites.edit(guild.id, {
-          SendMessages: true,
-          ViewChannel: true,
-        });
-        log('Welcome channel set to writable', 'discord-bot');
-      }
+      log('Channel setup complete', 'discord-bot');
     });
 
     // Handle new members
     discordClient.on('guildMemberAdd', async (member) => {
       const guild = member.guild;
-      const welcomeChannel = guild.channels.cache.find((c) => c.name === 'il-witamy');
+      
+      try {
+        // Give unverified role
+        const unverifiedRole = guild.roles.cache.find((r) => r.name === ROLE_NAMES.UNVERIFIED);
+        if (unverifiedRole) {
+          await member.roles.add(unverifiedRole);
+          log(`Added unverified role to ${member.user.username}`, 'discord-bot');
+        }
 
-      if (welcomeChannel && welcomeChannel.isTextBased()) {
-        try {
-          await welcomeChannel.send(
-            `Witaj ${member.user.username}! 🎉 Zapraszamy na nasz serwer!`
-          );
+        // Send welcome message in witamy channel
+        const welcomeChannel = guild.channels.cache.find((c) => c.name === 'witamy' && c.isTextBased());
+        if (welcomeChannel && welcomeChannel.isTextBased()) {
+          // Get member count
+          const memberCount = guild.memberCount;
+
+          // Create verification button
+          const verifyButton = new ButtonBuilder()
+            .setCustomId('verify_button')
+            .setLabel('Verify')
+            .setStyle(ButtonStyle.Primary);
+
+          const row = new ActionRowBuilder()
+            .addComponents(verifyButton);
+
+          // Create welcome embed
+          const embed = new EmbedBuilder()
+            .setTitle('Witamy')
+            .setDescription(`Cześć ${member}, witaj na naszym discordzie Baw się dobrze.\n\nJest nas teraz ${memberCount}, prosimy o zapoznanie się z regulaminem.`)
+            .setThumbnail(member.user.displayAvatarURL())
+            .setColor(0x5865f2);
+
+          await welcomeChannel.send({
+            embeds: [embed],
+            components: [row as any],
+          });
+          
           log(`Welcome message sent to ${member.user.username}`, 'discord-bot');
+        }
+      } catch (error) {
+        log(`Error welcoming member: ${error}`, 'discord-bot');
+      }
+    });
+
+    // Handle button interactions
+    discordClient.on('interactionCreate', async (interaction) => {
+      if (!interaction.isButton()) return;
+
+      if (interaction.customId === 'verify_button') {
+        const member = interaction.member;
+        if (!member || typeof member === 'string') return;
+
+        try {
+          const verifiedRole = interaction.guild?.roles.cache.find((r) => r.name === ROLE_NAMES.VERIFIED);
+          const unverifiedRole = interaction.guild?.roles.cache.find((r) => r.name === ROLE_NAMES.UNVERIFIED);
+
+          if (verifiedRole && unverifiedRole && member.roles && typeof member.roles.remove === 'function') {
+            await member.roles.remove(unverifiedRole);
+            await member.roles.add(verifiedRole);
+            
+            await interaction.reply({
+              content: 'Gratulacje! Jesteś teraz zweryfikowany i możesz widzieć wszystkie kanały.',
+              ephemeral: true,
+            });
+            
+            log(`Verified member: ${member.user?.username}`, 'discord-bot');
+          }
         } catch (error) {
-          log(`Error sending welcome message: ${error}`, 'discord-bot');
+          log(`Error verifying member: ${error}`, 'discord-bot');
+          await interaction.reply({
+            content: 'Coś poszło nie tak podczas weryfikacji.',
+            ephemeral: true,
+          });
         }
       }
     });
