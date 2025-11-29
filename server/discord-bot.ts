@@ -104,8 +104,25 @@ async function initializeDiscordBot() {
         log(`Created role: ${ROLE_NAMES.KLIENT}`, 'discord-bot');
       }
 
-      // Update klienci channel name
-      await updateKlienciChannelName(guild);
+      // Create or update klienci channel
+      try {
+        let klienciChannel = guild.channels.cache.find((c) => c.name.startsWith('klienci-'));
+        
+        if (!klienciChannel) {
+          // Create klienci channel if it doesn't exist
+          const klientCount = klientRole.members.size;
+          klienciChannel = await guild.channels.create({
+            name: `klienci-${klientCount}`,
+            type: ChannelType.GuildText,
+          });
+          log(`Created klienci channel: klienci-${klientCount}`, 'discord-bot');
+        } else {
+          // Update existing channel name
+          await updateKlienciChannelName(guild);
+        }
+      } catch (error) {
+        log(`Error creating/updating klienci channel: ${error}`, 'discord-bot');
+      }
 
       // Post regulamin in regulamin channel
       const regulaminChannel = guild.channels.cache.find((c) => c.name === 'regulamin' && c.isTextBased());
