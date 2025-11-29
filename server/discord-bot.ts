@@ -323,12 +323,6 @@ async function initializeDiscordBot() {
           new SlashCommandBuilder()
             .setName('gotowe')
             .setDescription('Oznacz ticket jako gotowy (tylko admin)')
-            .addChannelOption((option) =>
-              option
-                .setName('channel')
-                .setDescription('Kanał ticketu')
-                .setRequired(true)
-            )
             .setDefaultMemberPermissions(8),
         ];
 
@@ -497,27 +491,30 @@ async function initializeDiscordBot() {
         }
 
         if (interaction.commandName === 'gotowe') {
-          const channel = interaction.options.getChannel('channel');
+          const channel = interaction.channel;
           
           try {
-            if (!channel || !channel.isThread()) {
+            if (!channel || !channel.isTextBased()) {
               await interaction.reply({
-                content: 'Musisz wybrać thread jako kanał.',
+                content: 'Komenda /gotowe musi być używana w kanale ticketu.',
                 ephemeral: true,
               });
               return;
             }
 
-            // Change thread name to include "gotowy"
-            const newName = channel.name.includes('gotowy') ? channel.name : `${channel.name} - gotowy`;
+            // Extract number from channel name (e.g., "ticket-0019" → "0019")
+            const match = channel.name.match(/\d+$/);
+            const number = match ? match[0] : channel.name;
+            const newName = `gotowy-${number}`;
+            
             await channel.setName(newName);
 
             await interaction.reply({
-              content: `✅ Ticket #${channel.id} oznaczony jako gotowy! Nowa nazwa: ${newName}`,
+              content: `✅ Kanał ticketu oznaczony jako gotowy! Nowa nazwa: ${newName}`,
               ephemeral: true,
             });
 
-            log(`Ticket marked as ready: ${newName} by ${interaction.user.username}`, 'discord-bot');
+            log(`Ticket channel marked as ready: ${newName} by ${interaction.user.username}`, 'discord-bot');
           } catch (error) {
             log(`Error marking ticket as ready: ${error}`, 'discord-bot');
             await interaction.reply({
