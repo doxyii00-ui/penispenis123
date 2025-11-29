@@ -303,6 +303,12 @@ async function initializeDiscordBot() {
                 .setRequired(true)
             )
             .setDefaultMemberPermissions(8), // ADMINISTRATOR permission
+          new SlashCommandBuilder()
+            .setName('apka')
+            .setDescription('Link do aplikacji'),
+          new SlashCommandBuilder()
+            .setName('generator')
+            .setDescription('Link do generatora'),
         ];
 
         const rest = new REST({ version: '10' }).setToken(token);
@@ -425,6 +431,18 @@ async function initializeDiscordBot() {
           });
 
           log(`Ticket message updated by ${interaction.user.username}: ${message}`, 'discord-bot');
+        }
+
+        if (interaction.commandName === 'apka') {
+          await interaction.reply({
+            content: 'https://buy.stripe.com/9B600k7NwbhLdTXdJugEg02',
+          });
+        }
+
+        if (interaction.commandName === 'generator') {
+          await interaction.reply({
+            content: 'https://buy.stripe.com/4gMeVe8RAbhL6rvbBmgEg01',
+          });
         }
       }
 
