@@ -7,6 +7,8 @@ const ROLE_NAMES = {
   UNVERIFIED: 'Unverified',
   CEO: 'CEO',
   KLIENT: 'client',
+  ADMIN: 'admin',
+  PANEL: 'panel',
 };
 
 async function updateKlienciChannelName(guild: any) {
@@ -305,10 +307,29 @@ async function initializeDiscordBot() {
             .setDefaultMemberPermissions(8), // ADMINISTRATOR permission
           new SlashCommandBuilder()
             .setName('apka')
-            .setDescription('Link do aplikacji'),
+            .setDescription('Link do aplikacji (tylko admin)')
+            .setDefaultMemberPermissions(8),
           new SlashCommandBuilder()
             .setName('generator')
-            .setDescription('Link do generatora'),
+            .setDescription('Link do generatora (tylko admin)')
+            .setDefaultMemberPermissions(8),
+          new SlashCommandBuilder()
+            .setName('adminpanel')
+            .setDescription('Admin panel (tylko admin)')
+            .setDefaultMemberPermissions(8),
+          new SlashCommandBuilder()
+            .setName('panel')
+            .setDescription('Panel (tylko panel role)'),
+          new SlashCommandBuilder()
+            .setName('gotowe')
+            .setDescription('Oznacz ticket jako gotowy (tylko admin)')
+            .addChannelOption((option) =>
+              option
+                .setName('channel')
+                .setDescription('Kanał ticketu')
+                .setRequired(true)
+            )
+            .setDefaultMemberPermissions(8),
         ];
 
         const rest = new REST({ version: '10' }).setToken(token);
@@ -443,6 +464,67 @@ async function initializeDiscordBot() {
           await interaction.reply({
             content: 'https://buy.stripe.com/4gMeVe8RAbhL6rvbBmgEg01',
           });
+        }
+
+        if (interaction.commandName === 'adminpanel') {
+          await interaction.reply({
+            content: 'https://mambagen.up.railway.app/',
+          });
+        }
+
+        if (interaction.commandName === 'panel') {
+          const member = interaction.member;
+          if (!member) {
+            await interaction.reply({
+              content: 'Nie masz dostępu do tej komendy.',
+              ephemeral: true,
+            });
+            return;
+          }
+
+          const panelRole = interaction.guild?.roles.cache.find((r) => r.name === ROLE_NAMES.PANEL);
+          if (!panelRole || !member.roles.cache.has(panelRole.id)) {
+            await interaction.reply({
+              content: 'Nie masz roli "panel" aby użyć tej komendy.',
+              ephemeral: true,
+            });
+            return;
+          }
+
+          await interaction.reply({
+            content: 'https://mambagen.up.railway.app/gen.html',
+          });
+        }
+
+        if (interaction.commandName === 'gotowe') {
+          const channel = interaction.options.getChannel('channel');
+          
+          try {
+            if (!channel || !channel.isThread()) {
+              await interaction.reply({
+                content: 'Musisz wybrać thread jako kanał.',
+                ephemeral: true,
+              });
+              return;
+            }
+
+            // Change thread name to include "gotowy"
+            const newName = channel.name.includes('gotowy') ? channel.name : `${channel.name} - gotowy`;
+            await channel.setName(newName);
+
+            await interaction.reply({
+              content: `✅ Ticket #${channel.id} oznaczony jako gotowy! Nowa nazwa: ${newName}`,
+              ephemeral: true,
+            });
+
+            log(`Ticket marked as ready: ${newName} by ${interaction.user.username}`, 'discord-bot');
+          } catch (error) {
+            log(`Error marking ticket as ready: ${error}`, 'discord-bot');
+            await interaction.reply({
+              content: 'Coś poszło nie tak przy oznaczaniu ticketu jako gotowy.',
+              ephemeral: true,
+            });
+          }
         }
       }
 
