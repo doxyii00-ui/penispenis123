@@ -322,7 +322,13 @@ async function initializeDiscordBot() {
             .setDescription('Panel (tylko panel role)'),
           new SlashCommandBuilder()
             .setName('gotowe')
-            .setDescription('Oznacz ticket jako gotowy (tylko admin)')
+            .setDescription('Oznacz ticket jako gotowy i nadaj rangę client (tylko admin)')
+            .addStringOption((option) =>
+              option
+                .setName('username')
+                .setDescription('Nazwa użytkownika do nadania roli client')
+                .setRequired(true)
+            )
             .setDefaultMemberPermissions(8),
         ];
 
@@ -492,6 +498,7 @@ async function initializeDiscordBot() {
 
         if (interaction.commandName === 'gotowe') {
           const channel = interaction.channel;
+          const username = interaction.options.getString('username');
           
           try {
             if (!channel || !channel.isTextBased()) {
@@ -502,6 +509,47 @@ async function initializeDiscordBot() {
               return;
             }
 
+            if (!username) {
+              await interaction.reply({
+                content: 'Musisz podać nazwę użytkownika!',
+                ephemeral: true,
+              });
+              return;
+            }
+
+            // Find user by username
+            const guild = interaction.guild;
+            if (!guild) {
+              await interaction.reply({
+                content: 'Nie mogę znaleźć serwera.',
+                ephemeral: true,
+              });
+              return;
+            }
+
+            const members = await guild.members.fetch();
+            const targetMember = members.find((m) => m.user.username === username);
+
+            if (!targetMember) {
+              await interaction.reply({
+                content: `❌ Nie znaleziono użytkownika o nazwie "${username}"`,
+                ephemeral: true,
+              });
+              return;
+            }
+
+            // Find or create client role
+            let clientRole = guild.roles.cache.find((r) => r.name === ROLE_NAMES.KLIENT);
+            if (!clientRole) {
+              clientRole = await guild.roles.create({
+                name: ROLE_NAMES.KLIENT,
+                reason: 'Client members',
+              });
+            }
+
+            // Add client role to user
+            await targetMember.roles.add(clientRole);
+
             // Extract number from channel name (e.g., "ticket-0019" → "0019")
             const match = channel.name.match(/\d+$/);
             const number = match ? match[0] : channel.name;
@@ -510,11 +558,11 @@ async function initializeDiscordBot() {
             await channel.setName(newName);
 
             await interaction.reply({
-              content: `✅ Kanał ticketu oznaczony jako gotowy! Nowa nazwa: ${newName}`,
+              content: `✅ Kanał zmieniony na: ${newName}\n✅ Użytkownik ${username} otrzymał rangę client!`,
               ephemeral: true,
             });
 
-            log(`Ticket channel marked as ready: ${newName} by ${interaction.user.username}`, 'discord-bot');
+            log(`Ticket marked as ready: ${newName}, user ${username} got client role by ${interaction.user.username}`, 'discord-bot');
           } catch (error) {
             log(`Error marking ticket as ready: ${error}`, 'discord-bot');
             await interaction.reply({
@@ -628,91 +676,6 @@ async function initializeDiscordBot() {
             });
           }
         }
-      }
-    });
-
-    // Handle text commands (messages starting with !)
-    discordClient.on('messageCreate', async (message) => {
-      if (message.author.bot) return;
-      if (!message.content.startsWith('!')) return;
-
-      const args = message.content.slice(1).split(/\s+/);
-      const command = args[0].toLowerCase();
-
-      try {
-        switch (command) {
-          case 'apka':
-            await message.reply({
-              content: 'https://buy.stripe.com/9B600k7NwbhLdTXdJugEg02',
-            });
-            break;
-
-          case 'generator':
-            await message.reply({
-              content: 'https://buy.stripe.com/4gMeVe8RAbhL6rvbBmgEg01',
-            });
-            break;
-
-          case 'adminpanel':
-            await message.reply({
-              content: 'https://mambagen.up.railway.app/',
-            });
-            break;
-
-          case 'panel':
-            const member = message.member;
-            if (!member) {
-              await message.reply('Nie masz dostępu do tej komendy.');
-              return;
-            }
-
-            const panelRole = message.guild?.roles.cache.find((r) => r.name === ROLE_NAMES.PANEL);
-            if (!panelRole || !member.roles.cache.has(panelRole.id)) {
-              await message.reply('Nie masz roli "panel" aby użyć tej komendy.');
-              return;
-            }
-
-            await message.reply({
-              content: 'https://mambagen.up.railway.app/gen.html',
-            });
-            break;
-
-          case 'ticket':
-            await message.reply('Użyj slash command `/ticket` aby otworzyć ticket.');
-            break;
-
-          case 'gotowe':
-            if (!message.member?.permissions.has('Administrator')) {
-              await message.reply('Tylko admini mogą wykonać tę komendę!');
-              return;
-            }
-
-            const channel = message.channel;
-            if (!channel?.isTextBased()) {
-              await message.reply('Komenda !gotowe musi być używana w kanale ticketu.');
-              return;
-            }
-
-            const match = channel.name.match(/\d+$/);
-            const number = match ? match[0] : channel.name;
-            const newName = `gotowy-${number}`;
-            
-            try {
-              await channel.setName(newName);
-              await message.reply(`✅ Kanał ticketu oznaczony jako gotowy! Nowa nazwa: ${newName}`);
-              log(`Ticket channel marked as ready: ${newName} by ${message.author.username}`, 'discord-bot');
-            } catch (error) {
-              await message.reply('Coś poszło nie tak przy oznaczaniu ticketu jako gotowy.');
-              log(`Error marking ticket as ready: ${error}`, 'discord-bot');
-            }
-            break;
-
-          default:
-            // Nieznana komenda - nie odpowiadaj
-            break;
-        }
-      } catch (error) {
-        log(`Error handling text command !${command}: ${error}`, 'discord-bot');
       }
     });
 
