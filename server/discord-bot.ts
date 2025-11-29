@@ -6,7 +6,7 @@ const ROLE_NAMES = {
   VERIFIED: 'Verified',
   UNVERIFIED: 'Unverified',
   CEO: 'CEO',
-  KLIENT: 'klient',
+  KLIENT: 'client',
 };
 
 async function updateKlienciChannelName(guild: any) {
@@ -114,11 +114,23 @@ async function initializeDiscordBot() {
           klienciChannel = await guild.channels.create({
             name: `klienci-${klientCount}`,
             type: ChannelType.GuildText,
+            permissionOverwrites: [
+              {
+                id: guild.id,
+                deny: [PermissionFlagsBits.SendMessages],
+              },
+            ],
           });
           log(`Created klienci channel: klienci-${klientCount}`, 'discord-bot');
         } else {
-          // Update existing channel name
+          // Update existing channel name and permissions
           await updateKlienciChannelName(guild);
+          await klienciChannel.permissionOverwrites.set([
+            {
+              id: guild.id,
+              deny: [PermissionFlagsBits.SendMessages],
+            },
+          ]);
         }
       } catch (error) {
         log(`Error creating/updating klienci channel: ${error}`, 'discord-bot');
