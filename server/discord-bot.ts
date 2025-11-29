@@ -11,10 +11,21 @@ const ROLE_NAMES = {
 
 async function updateKlienciChannelName(guild: any) {
   try {
-    const klientRole = guild.roles.cache.find((r: any) => r.name === ROLE_NAMES.KLIENT);
-    if (!klientRole) return;
+    // Count members with both "client" and "klient" roles
+    let klientCount = 0;
+    
+    const clientRole = guild.roles.cache.find((r: any) => r.name === 'client');
+    const klientRole = guild.roles.cache.find((r: any) => r.name === 'klient');
+    
+    if (clientRole) {
+      klientCount += clientRole.members.size;
+    }
+    if (klientRole) {
+      klientCount += klientRole.members.size;
+    }
 
-    const klientCount = klientRole.members.size;
+    log(`Klient count: ${klientCount} (client: ${clientRole?.members.size || 0}, klient: ${klientRole?.members.size || 0})`, 'discord-bot');
+
     const klienciChannel = guild.channels.cache.find((c: any) => c.name.startsWith('klienci-'));
 
     if (klienciChannel && klienciChannel.isTextBased()) {
