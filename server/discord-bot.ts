@@ -2,41 +2,32 @@ import { Client, GatewayIntentBits, ChannelType, PermissionFlagsBits, ActionRowB
 import { storage } from './storage';
 import { log } from './app';
 
-// Discord bot configuration
-const CHANNEL_CONFIG = [
-  { category: 'lobby', channels: ['👋-witamy', '✅-weryfikacja'] },
-  { category: 'info', channels: ['📋-regulamin', '📢-ogłoszenia'] },
-  { category: 'konkursy', channels: ['🎁-konkursy'] },
-  { category: 'boosty', channels: ['⭐-boosty'] },
-  { category: 'xd', channels: ['😂-xd'] },
-  { category: 'RESELLER', channels: ['💼-ressell-info', '📝-ressell-lista'] },
-  { category: 'legitki', channels: ['✔️-legit', '💬-opinie', '❓-czy-legit'] },
-  { category: 'zakup', channels: ['📱-aplikacja', '🎫-tickety'] },
-];
-
-// Map of old channel names to new names with emojis
-const CHANNEL_NAME_MAP: { [key: string]: string } = {
-  'witamy': '👋-witamy',
-  'weryfikacja': '✅-weryfikacja',
-  'regulamin': '📋-regulamin',
-  'ogłoszenia': '📢-ogłoszenia',
-  'konkursy': '🎁-konkursy',
-  'boosty': '⭐-boosty',
-  'xd': '😂-xd',
-  'ressell-info': '💼-ressell-info',
-  'ressell-lista': '📝-ressell-lista',
-  'legit': '✔️-legit',
-  'opinie': '💬-opinie',
-  'czy-legit': '❓-czy-legit',
-  'aplikacja': '📱-aplikacja',
-  'tickety': '🎫-tickety',
-};
-
 const ROLE_NAMES = {
   VERIFIED: 'Verified',
   UNVERIFIED: 'Unverified',
   CEO: 'CEO',
+  KLIENT: 'klient',
 };
+
+async function updateKlienciChannelName(guild: any) {
+  try {
+    const klientRole = guild.roles.cache.find((r: any) => r.name === ROLE_NAMES.KLIENT);
+    if (!klientRole) return;
+
+    const klientCount = klientRole.members.size;
+    const klienciChannel = guild.channels.cache.find((c: any) => c.name.startsWith('klienci-'));
+
+    if (klienciChannel && klienciChannel.isTextBased()) {
+      const newName = `klienci-${klientCount}`;
+      if (klienciChannel.name !== newName) {
+        await klienciChannel.setName(newName);
+        log(`Updated klienci channel name to: ${newName}`, 'discord-bot');
+      }
+    }
+  } catch (error) {
+    log(`Error updating klienci channel name: ${error}`, 'discord-bot');
+  }
+}
 
 let discordClient: Client | null = null;
 
@@ -76,7 +67,7 @@ async function initializeDiscordBot() {
 
       log(`Connected to guild: ${guild.name}`, 'discord-bot');
 
-      // Create or get verified/unverified roles
+      // Create or get roles
       let verifiedRole = guild.roles.cache.find((r) => r.name === ROLE_NAMES.VERIFIED);
       if (!verifiedRole) {
         verifiedRole = await guild.roles.create({
@@ -99,72 +90,25 @@ async function initializeDiscordBot() {
       if (!ceoRole) {
         ceoRole = await guild.roles.create({
           name: ROLE_NAMES.CEO,
-          reason: 'CEO role - can send messages',
+          reason: 'CEO role',
         });
         log(`Created role: ${ROLE_NAMES.CEO}`, 'discord-bot');
       }
 
-      log('Bot initialized - no automatic channel creation', 'discord-bot');
-
-      // Rename channels to add emojis
-      try {
-        const allChannels = guild.channels.cache.filter((c) => c.isTextBased());
-        for (const channel of allChannels.values()) {
-          if (channel.isTextBased()) {
-            const oldName = channel.name;
-            const newName = CHANNEL_NAME_MAP[oldName];
-            if (newName && channel.name !== newName) {
-              await channel.setName(newName);
-              log(`Renamed channel: ${oldName} -> ${newName}`, 'discord-bot');
-            }
-          }
-        }
-      } catch (error) {
-        log(`Error renaming channels: ${error}`, 'discord-bot');
+      let klientRole = guild.roles.cache.find((r) => r.name === ROLE_NAMES.KLIENT);
+      if (!klientRole) {
+        klientRole = await guild.roles.create({
+          name: ROLE_NAMES.KLIENT,
+          reason: 'Client members',
+        });
+        log(`Created role: ${ROLE_NAMES.KLIENT}`, 'discord-bot');
       }
 
-      // Set channel permissions - only CEO can send messages
-      try {
-        const allChannels = guild.channels.cache.filter((c) => c.isTextBased());
-        for (const channel of allChannels.values()) {
-          if (channel.isTextBased()) {
-            const readOnlyChannels = ['👋-witamy', '✅-weryfikacja'];
-            const isReadOnly = readOnlyChannels.includes(channel.name);
-
-            if (isReadOnly) {
-              // witamy and weryfikacja - special channels for unverified users
-              await channel.permissionOverwrites.set([
-                {
-                  id: guild.id,
-                  allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages],
-                },
-              ]);
-            } else {
-              // All other channels - only CEO can send messages
-              await channel.permissionOverwrites.set([
-                {
-                  id: guild.id,
-                  deny: [PermissionFlagsBits.SendMessages],
-                },
-                {
-                  id: verifiedRole.id,
-                  deny: [PermissionFlagsBits.SendMessages],
-                },
-                {
-                  id: ceoRole.id,
-                  allow: [PermissionFlagsBits.SendMessages],
-                },
-              ]);
-            }
-          }
-        }
-        log('Channel permissions set - only CEO can send messages', 'discord-bot');
-      } catch (error) {
-        log(`Error setting channel permissions: ${error}`, 'discord-bot');
-      }
+      // Update klienci channel name
+      await updateKlienciChannelName(guild);
 
       // Post regulamin in regulamin channel
-      const regulaminChannel = guild.channels.cache.find((c) => c.name === '📋-regulamin' && c.isTextBased());
+      const regulaminChannel = guild.channels.cache.find((c) => c.name === 'regulamin' && c.isTextBased());
       if (regulaminChannel && regulaminChannel.isTextBased()) {
         try {
           const messages = await regulaminChannel.messages.fetch({ limit: 10 });
@@ -208,7 +152,7 @@ async function initializeDiscordBot() {
       }
 
       // Post legit check message in czy-legit channel
-      const czyLegitChannel = guild.channels.cache.find((c) => c.name === '❓-czy-legit' && c.isTextBased());
+      const czyLegitChannel = guild.channels.cache.find((c) => c.name === 'czy-legit' && c.isTextBased());
       if (czyLegitChannel && czyLegitChannel.isTextBased()) {
         try {
           const messages = await czyLegitChannel.messages.fetch({ limit: 10 });
@@ -235,7 +179,7 @@ async function initializeDiscordBot() {
       }
 
       // Post verification message in weryfikacja channel
-      const weryfikacjaChannel = guild.channels.cache.find((c) => c.name === '✅-weryfikacja' && c.isTextBased());
+      const weryfikacjaChannel = guild.channels.cache.find((c) => c.name === 'weryfikacja' && c.isTextBased());
       if (weryfikacjaChannel && weryfikacjaChannel.isTextBased()) {
         try {
           const messages = await weryfikacjaChannel.messages.fetch({ limit: 10 });
@@ -268,7 +212,7 @@ async function initializeDiscordBot() {
       }
 
       // Post ticket message in tickety channel
-      const ticketyChannel = guild.channels.cache.find((c) => c.name === '🎫-tickety' && c.isTextBased());
+      const ticketyChannel = guild.channels.cache.find((c) => c.name === 'tickety' && c.isTextBased());
       if (ticketyChannel && ticketyChannel.isTextBased()) {
         try {
           const messages = await ticketyChannel.messages.fetch({ limit: 10 });
@@ -372,6 +316,18 @@ async function initializeDiscordBot() {
         }
       } catch (error) {
         log(`Error welcoming member: ${error}`, 'discord-bot');
+      }
+    });
+
+    // Handle member role updates
+    discordClient.on('guildMemberUpdate', async (oldMember, newMember) => {
+      const guild = newMember.guild;
+      const oldKlientRole = oldMember.roles.cache.find((r) => r.name === ROLE_NAMES.KLIENT);
+      const newKlientRole = newMember.roles.cache.find((r) => r.name === ROLE_NAMES.KLIENT);
+
+      // If klient role was added or removed, update the channel name
+      if (oldKlientRole !== newKlientRole) {
+        await updateKlienciChannelName(guild);
       }
     });
 
