@@ -11,6 +11,9 @@ const ROLE_NAMES = {
 
 async function updateKlienciChannelName(guild: any) {
   try {
+    // Fetch all members to ensure cache is populated
+    await guild.members.fetch();
+
     // Count members with both "client" and "klient" roles
     let klientCount = 0;
     
