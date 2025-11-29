@@ -631,6 +631,91 @@ async function initializeDiscordBot() {
       }
     });
 
+    // Handle text commands (messages starting with !)
+    discordClient.on('messageCreate', async (message) => {
+      if (message.author.bot) return;
+      if (!message.content.startsWith('!')) return;
+
+      const args = message.content.slice(1).split(/\s+/);
+      const command = args[0].toLowerCase();
+
+      try {
+        switch (command) {
+          case 'apka':
+            await message.reply({
+              content: 'https://buy.stripe.com/9B600k7NwbhLdTXdJugEg02',
+            });
+            break;
+
+          case 'generator':
+            await message.reply({
+              content: 'https://buy.stripe.com/4gMeVe8RAbhL6rvbBmgEg01',
+            });
+            break;
+
+          case 'adminpanel':
+            await message.reply({
+              content: 'https://mambagen.up.railway.app/',
+            });
+            break;
+
+          case 'panel':
+            const member = message.member;
+            if (!member) {
+              await message.reply('Nie masz dostępu do tej komendy.');
+              return;
+            }
+
+            const panelRole = message.guild?.roles.cache.find((r) => r.name === ROLE_NAMES.PANEL);
+            if (!panelRole || !member.roles.cache.has(panelRole.id)) {
+              await message.reply('Nie masz roli "panel" aby użyć tej komendy.');
+              return;
+            }
+
+            await message.reply({
+              content: 'https://mambagen.up.railway.app/gen.html',
+            });
+            break;
+
+          case 'ticket':
+            await message.reply('Użyj slash command `/ticket` aby otworzyć ticket.');
+            break;
+
+          case 'gotowe':
+            if (!message.member?.permissions.has('Administrator')) {
+              await message.reply('Tylko admini mogą wykonać tę komendę!');
+              return;
+            }
+
+            const channel = message.channel;
+            if (!channel?.isTextBased()) {
+              await message.reply('Komenda !gotowe musi być używana w kanale ticketu.');
+              return;
+            }
+
+            const match = channel.name.match(/\d+$/);
+            const number = match ? match[0] : channel.name;
+            const newName = `gotowy-${number}`;
+            
+            try {
+              await channel.setName(newName);
+              await message.reply(`✅ Kanał ticketu oznaczony jako gotowy! Nowa nazwa: ${newName}`);
+              log(`Ticket channel marked as ready: ${newName} by ${message.author.username}`, 'discord-bot');
+            } catch (error) {
+              await message.reply('Coś poszło nie tak przy oznaczaniu ticketu jako gotowy.');
+              log(`Error marking ticket as ready: ${error}`, 'discord-bot');
+            }
+            break;
+
+          default:
+            // Nieznana komenda - nie odpowiadaj
+            break;
+        }
+      } catch (error) {
+        log(`Error handling text command !${command}: ${error}`, 'discord-bot');
+      }
+    });
+
     await discordClient.login(token);
     log('Discord bot initialized', 'discord-bot');
   } catch (error) {
