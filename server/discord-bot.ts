@@ -322,13 +322,7 @@ async function initializeDiscordBot() {
             .setDescription('Panel (tylko panel role)'),
           new SlashCommandBuilder()
             .setName('gotowe')
-            .setDescription('Oznacz ticket jako gotowy i nadaj rangę client (tylko admin)')
-            .addStringOption((option) =>
-              option
-                .setName('username')
-                .setDescription('Nazwa użytkownika do nadania roli client')
-                .setRequired(true)
-            )
+            .setDescription('Oznacz ticket jako gotowy (tylko admin)')
             .setDefaultMemberPermissions(8),
         ];
 
@@ -498,7 +492,6 @@ async function initializeDiscordBot() {
 
         if (interaction.commandName === 'gotowe') {
           const channel = interaction.channel;
-          const username = interaction.options.getString('username');
           
           try {
             if (!channel || !channel.isTextBased()) {
@@ -509,47 +502,6 @@ async function initializeDiscordBot() {
               return;
             }
 
-            if (!username) {
-              await interaction.reply({
-                content: 'Musisz podać nazwę użytkownika!',
-                ephemeral: true,
-              });
-              return;
-            }
-
-            // Find user by username
-            const guild = interaction.guild;
-            if (!guild) {
-              await interaction.reply({
-                content: 'Nie mogę znaleźć serwera.',
-                ephemeral: true,
-              });
-              return;
-            }
-
-            const members = await guild.members.fetch();
-            const targetMember = members.find((m) => m.user.username === username);
-
-            if (!targetMember) {
-              await interaction.reply({
-                content: `❌ Nie znaleziono użytkownika o nazwie "${username}"`,
-                ephemeral: true,
-              });
-              return;
-            }
-
-            // Find or create client role
-            let clientRole = guild.roles.cache.find((r) => r.name === ROLE_NAMES.KLIENT);
-            if (!clientRole) {
-              clientRole = await guild.roles.create({
-                name: ROLE_NAMES.KLIENT,
-                reason: 'Client members',
-              });
-            }
-
-            // Add client role to user
-            await targetMember.roles.add(clientRole);
-
             // Extract number from channel name (e.g., "ticket-0019" → "0019")
             const match = channel.name.match(/\d+$/);
             const number = match ? match[0] : channel.name;
@@ -558,11 +510,11 @@ async function initializeDiscordBot() {
             await channel.setName(newName);
 
             await interaction.reply({
-              content: `✅ Kanał zmieniony na: ${newName}\n✅ Użytkownik ${username} otrzymał rangę client!`,
+              content: `✅ Kanał ticketu oznaczony jako gotowy! Nowa nazwa: ${newName}`,
               ephemeral: true,
             });
 
-            log(`Ticket marked as ready: ${newName}, user ${username} got client role by ${interaction.user.username}`, 'discord-bot');
+            log(`Ticket channel marked as ready: ${newName} by ${interaction.user.username}`, 'discord-bot');
           } catch (error) {
             log(`Error marking ticket as ready: ${error}`, 'discord-bot');
             await interaction.reply({
